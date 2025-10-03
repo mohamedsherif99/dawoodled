@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>عرض أسعار — تفاعلي</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    body{font-family: Arial, sans-serif;background:#f6f7fb;padding:20px;color:#111}
+    .card{max-width:1000px;margin:0 auto;background:#fff;padding:20px 30px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+    header img{height:100px}
+    h1{font-size:22px;margin:0 0 10px}
+    .company-info{font-size:13px;line-height:1.6;text-align:left}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px}
+    label{font-weight:600;font-size:14px}
+    .field{margin-bottom:6px;font-size:14px}
+    .field input{width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;text-align:right}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px;table-layout:fixed}
+    table th, table td{border:1px solid #e6e9ef;padding:6px;text-align:right;vertical-align:top}
+    table th{background:#fafbfd}
+    table input, table textarea{width:100%;border:none;text-align:right;font-size:13px;box-sizing:border-box}
+    table textarea{resize:none;overflow:hidden;white-space:pre-wrap;text-align:right}
+    .summary{margin-top:15px;font-size:14px;text-align:right}
+    .summary div{margin:3px 0}
+    .notes textarea{width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:13px;text-align:right}
+    .sign{margin-top:40px;display:flex;justify-content:space-between;font-size:14px}
+    button{padding:8px 12px;border-radius:8px;border:0;cursor:pointer;margin:3px}
+    .btn-primary{background:#0b69ff;color:#fff}
+    .btn-muted{background:#eef2ff}
+    @media print {
+      button{display:none}
+      body{background:#fff;padding:0}
+      .card{box-shadow:none;margin:0;border-radius:0}
+      th:last-child, td:last-child {display:none !important;}
+    }
+    /* وضع خاص عند التصدير PDF */
+    .export-pdf th:last-child,
+    .export-pdf td:last-child,
+    .export-pdf button,
+    .export-pdf #status {
+      display: none !important;
+    }
+    .export-pdf input,
+    .export-pdf textarea {
+      text-align: right !important;
+    }
+    #status{margin-top:12px;font-size:13px;color:#444}
+  </style>
+</head>
+<body>
+  <div class="card" id="quote">
+    <header>
+      <div>
+        <h1>عرض أسعار</h1>
+        <div class="company-info" style="text-align:right">
+          <div>https://dawoodled.com</div>
+          <div>Dawood led</div>
+          <div>هاتف:0133231068 </div>
+          <div>فاكس: ٤٨٨٥٤٨٠٦٣</div>
+          
+        </div>
+      </div>
+      <img src="https://f.top4top.io/p_3560y9aqi1.png"  alt="شعار الشركة">
+    </header>
+
+    <div class="info-grid">
+      <div>
+        <div class="field"><label>الإسم:</label> <input id="clientName" value="محمد شريف"></div>
+        <div class="field"><label>العنوان:</label> <input id="clientAddress" value="القليوبية"></div>
+        <div class="field"><label>عناية:</label> <input id="attention"></div>
+      </div>
+      <div>
+        <div class="field"><label>رقم العرض:</label> <input id="quoteNumber" value="72083"></div>
+        <div class="field"><label>التاريخ:</label> <input id="quoteDate" type="date" value="2025-04-13"></div>
+        <div class="field"><label>الأسعار سارية حتى:</label> <input id="validUntil" type="date" value="2025-04-15"></div>
+      </div>
+    </div>
+
+    <table id="itemsTable">
+      <thead>
+        <tr>
+          <th style="width:10%">رقم الصنف</th>
+          <th style="width:40%">إسم الصنف</th>
+          <th style="width:10%">الوحدة</th>
+          <th style="width:15%">سعر الوحدة</th>
+          <th style="width:10%">الكمية</th>
+          <th style="width:15%">الإجمالي</th>
+          <th>إجراء</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <button class="btn-muted" onclick="addRow()">+ إضافة صنف</button>
+
+    <div class="summary">
+      <div><strong>المجموع:</strong> <span id="subtotal">0.00</span> ج.م</div>
+      <div><strong>مبلغ الخصم:</strong> <input id="discountAmount" type="number" value="0" oninput="recalc()"> ج.م</div>
+      <div><strong>نسبة الخصم %:</strong> <input id="discountRate" type="number" value="0" oninput="recalc()"></div>
+      <div><strong>المبلغ بعد الخصم:</strong> <span id="afterDiscount">0.00</span> ج.م</div>
+      <div><strong>نسبة الضريبة %:</strong> <input id="taxRate" type="number" value="0" oninput="recalc()"></div>
+      <div><strong>المبلغ النهائي:</strong> <span id="grandTotal">0.00</span> ج.م</div>
+    </div>
+
+    <div class="notes">
+      <label>ملاحظات:</label>
+      <textarea id="notes" rows="4">العرض يشمل توريد وتركيب\nغير شامل التجهيزات الحديدية وضريبة القيمة المضافة\nغير شامل مصدر الكهرباء الرئيسي\nالضمان لمدة عامين\nمكان التسليم: القليوبية\nفترات التوريد: خلال 4 - 7 أيام من التعاقد\nطريقة السداد: %100 قبل التوريد والتركيب</textarea>
+    </div>
+
+    <div class="sign">
+      <div>
+        <p>إسم وتوقيع المستلم:</p>
+        <p>_____________________</p>
+      </div>
+      <div>
+        <p>التوقيع:</p>
+        <p>_____________________</p>
+      </div>
+    </div>
+
+    <div class="actions" style="margin-top:20px;text-align:left">
+      <button id="downloadPdfBtn" class="btn-primary">تحميل PDF</button>
+      <button id="printBtn" class="btn-muted">طباعة</button>
+      <div id="status" role="status"></div>
+    </div>
+  </div>
+
+  <script>
+    function formatNum(n){return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+
+    function autoResizeTextarea(el){
+      el.style.height='auto';
+      el.style.height=el.scrollHeight+'px';
+    }
+
+    function addRow(itemNo='', itemName='', unit=1, unitPrice=0, qty=1){
+      const tbody=document.querySelector('#itemsTable tbody');
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td><input value="${itemNo}" style="text-align:right"></td>
+        <td><textarea oninput="autoResizeTextarea(this)" style="text-align:right">${itemName}</textarea></td>
+        <td><input type="number" value="${unit}" style="text-align:right"></td>
+        <td><input type="number" value="${unitPrice}" oninput="recalc()" style="text-align:right"></td>
+        <td><input type="number" value="${qty}" oninput="recalc()" style="text-align:right"></td>
+        <td class="lineTotal">0.00</td>
+        <td><button onclick="this.closest('tr').remove(); recalc();">❌</button></td>
+      `;
+      tbody.appendChild(tr);
+      const ta=tr.querySelector('textarea');
+      autoResizeTextarea(ta);
+      recalc();
+    }
+
+    function recalc(){
+      let sub=0;
+      document.querySelectorAll('#itemsTable tbody tr').forEach(r=>{
+        const unitPrice=parseFloat(r.cells[3].querySelector('input').value)||0;
+        const qty=parseFloat(r.cells[4].querySelector('input').value)||0;
+        const line=unitPrice*qty;
+        r.querySelector('.lineTotal').innerText=formatNum(line);
+        sub+=line;
+      });
+      document.getElementById('subtotal').innerText=formatNum(sub);
+      let discountAmount=parseFloat(document.getElementById('discountAmount').value)||0;
+      let discountRate=parseFloat(document.getElementById('discountRate').value)||0;
+      let afterDiscount=sub - discountAmount - (sub*discountRate/100);
+      if(afterDiscount<0) afterDiscount=0;
+      document.getElementById('afterDiscount').innerText=formatNum(afterDiscount);
+      let taxRate=parseFloat(document.getElementById('taxRate').value)||0;
+      let grand=afterDiscount + (afterDiscount*taxRate/100);
+      document.getElementById('grandTotal').innerText=formatNum(grand);
+    }
+
+    document.getElementById('printBtn').onclick=()=>window.print();
+    document.getElementById('downloadHtmlBtn').onclick=()=>{
+      const html=`<!doctype html><html>${document.documentElement.innerHTML}</html>`;
+      const blob=new Blob([html],{type:'text/html'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=`عرض-سعر-${document.getElementById('quoteNumber').value||'unnamed'}.html`;
+      a.click();
+    }
+
+    async function handleDownloadPDF(){
+      try{
+        if(typeof window.html2canvas==='undefined') await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+        if(typeof window.jspdf==='undefined') await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+        const { jsPDF }=window.jspdf;
+        const el=document.getElementById('quote');
+        // أضف وضع التصدير
+        el.classList.add('export-pdf');
+
+        const canvas=await window.html2canvas(el,{scale:2});
+        const imgData=canvas.toDataURL('image/png');
+        const pdf=new jsPDF({orientation:'portrait',unit:'pt',format:'a4'});
+        const pageWidth=pdf.internal.pageSize.getWidth();
+        const pageHeight=pdf.internal.pageSize.getHeight();
+        const ratio=Math.min(pageWidth/canvas.width,pageHeight/canvas.height);
+        const imgWidth=canvas.width*ratio;
+        const imgHeight=canvas.height*ratio;
+        const marginX=(pageWidth-imgWidth)/2;
+        pdf.addImage(imgData,'PNG',marginX,20,imgWidth,imgHeight);
+        pdf.save(`عرض-سعر-${document.getElementById('quoteNumber').value||'unnamed'}.pdf`);
+
+        // رجع الوضع العادي
+        el.classList.remove('export-pdf');
+      }catch(err){
+        alert('تعذر إنشاء PDF، استخدم زر الطباعة أو تحميل HTML.');
+        console.error(err);
+      }
+    }
+
+    function loadScript(url){
+      return new Promise((resolve,reject)=>{
+        const s=document.createElement('script');
+        s.src=url; s.onload=resolve; s.onerror=reject; document.head.appendChild(s);
+      });
+    }
+
+    document.getElementById('downloadPdfBtn').onclick=handleDownloadPDF;
+
+    // أصناف تجريبية
+    addRow('4718','Outdoor P5 Die Casting 96 CM - Dimension 576 * 960',1,54906,60);
+    addRow('2026','Video Processor Colorlight X4 S',1,25714,1);
+    addRow('2991','علبة كهرباء للشاشات',1,40000,1);
+  </script>
+</body>
+</html>
